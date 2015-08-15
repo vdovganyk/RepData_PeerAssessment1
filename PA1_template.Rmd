@@ -1,25 +1,104 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Assesment1"
+author: "Volodymyr Dovhanyk"
+date: "Friday, August 14, 2015"
+output: html_document
 ---
+#Loading and preprocessing the data
+This markupfile is generated as resualts of peer assesment for week 2 at Coursera "Reproducible research" courses.
+Firstly we download th file with initial data into your working directory and read the data with R. 
+**This code can produce some warnings but file should besuccesfully downloaded and precessed.**
 
+```{r results='hide', cache=TRUE}
+unzip (zipfile="activity.zip", exdir="data")
+data<-read.csv("data/activity.csv")
+```
+#What is mean total number of steps taken per day?
+The mean of steps per day are presented below
+```{r meansteps}
+meanSteps<-aggregate(data$steps, by=list(data$date), FUN=mean)
+```
+In addition we can evaluate the mean values based on the histogram.
+*Please note NAs are replaced by 0*
+```{r}
+meanSteps$x[is.na(meanSteps[2])]<-0
+hist(as.numeric(meanSteps$x), xlab="Mean steps per day", main="Mean steps per day")
+```
+``` {r meanval, echo=FALSE}
+meanval<-mean(data$steps, na.rm=T)
+```
+```{r medianval, echo=FALSE}
+medianval<-median(data$steps)
+```
+The mean  of the total number of steps taken per day is equal `r meanval` and median `r medianval`. 
 
-## Loading and preprocessing the data
+#What is the average daily activity pattern?
+Average number of steps taken, averaged across all days is presented in the chart below
 
+```{r}
+meanStepsDayly<-aggregate(data$steps, by=list(data$interval), FUN=mean, na.rm=T)
+plot(meanStepsDayly$Group.1, meanStepsDayly$x, type="l", 
+     xlab="Interval", ylab="Step mean")
+```
+```{r bestInterval, echo=FALSE,results='hide'}
+best<-meanStepsDayly[meanStepsDayly[2]==max(meanStepsDayly[2])]
+bestInterval<-round(best[1],0)
+bestSteps<-best[2]
+```
+Maximum number of steps os reached at `r bestInterval` and reaches value `r bestSteps`
+#Imputing missing values
+``` {r echo=FALSE, results='hide'}
+na.num<-sum(is.na(data$steps))
 
+```
+Initial dataset contains `r na.num` NA values.
+To improve quality of dataset we create new dataset CleanData and replace NAs with mean values for the corresponding intervals.
 
-## What is mean total number of steps taken per day?
+``` {r results='hide'}
+CleanData<-data
+for (i in 1:length(CleanData$steps)) {
+    if (is.na(CleanData$steps[i])) {
+        CleanData$steps[i]<-
+            meanStepsDayly$x[meanStepsDayly$Group.1==CleanData$interval[i]]
+    }
+}
+```
 
+Results of such kind repacement can be evaluated on the cart bellow.
+``` {r}
+NewMeanSteps<-aggregate(CleanData$steps, by=list(data$date), FUN=mean)
+hist(as.numeric(NewMeanSteps$x), xlab="Mean steps per day", main="Mean steps per day (cleaned data)")
 
+NewMean<-mean(CleanData$steps)
+NewMedian<-median(CleanData$steps)
+```
 
-## What is the average daily activity pattern?
+After replacement the steps mean was increased to `r NewMean` and median value is the same `r NewMedian` because of huge numbers of zeros in initial dataset.
 
+#Are there differences in activity patterns between weekdays and weekends?
+First of all we defined weekdays and append corresponding column to the cleaned dataset.
+```{r results='hide'}
+weekdays<-factor(c("weekend","weekday"))
+CleanData<-cbind(CleanData,weekdays)
+weekend<-c("субота", "нед≥л€")
+weekday<-c("понед≥лок", "в≥второк", "середа", "четвер", "п'€тниц€")
+CleanData$weekdays[weekdays(as.Date(CleanData$date)) %in% weekday]<-"weekday"
+CleanData$weekdays[weekdays(as.Date(CleanData$date)) %in% weekend]<-"weekend"
 
+```
+Please notice for weekdays we use Ukranian names `r weekend` and `r weekday` instead of English ones, because of using cyrylic settings in OS.
+We can evaluate the differences between weekdyas and weekends in the chart below.
+```{r}
+meanStepsDaylyWD<-aggregate(CleanData$steps, 
+                            by=list(CleanData$interval, CleanData$weekdays), FUN=mean)
 
-## Imputing missing values
+par(mfrow=c(2,1))
 
+plot(x=meanStepsDaylyWD$Group.1[meanStepsDaylyWD$Group.2=="weekday"],
+     y=meanStepsDaylyWD$x[meanStepsDaylyWD$Group.2=="weekday"], type="l", 
+     xlab="intervals", ylab="Mean steps", main="Weekdays")
+plot(x=meanStepsDaylyWD$Group.1[meanStepsDaylyWD$Group.2=="weekend"],
+     y=meanStepsDaylyWD$x[meanStepsDaylyWD$Group.2=="weekend"], type="l", 
+     xlab="intervals", ylab="Mean steps", main="Weekends")
+```
 
-
-## Are there differences in activity patterns between weekdays and weekends?
